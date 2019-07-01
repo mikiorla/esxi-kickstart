@@ -43,6 +43,9 @@ $esxiIsoFile = "D:\iso\VMware-VMvisor-Installer-6.7.0.update01-10302608.x86_64.i
 #add menu for chosing iso
 #$beforeMount = Get-Volume
 Mount-DiskImage -ImagePath $esxiIsoFile -StorageType ISO -Access ReadOnly
+# I have problems mounting ISO file on Win10 Build:17134 Version: 10.0.17134, it gets stuck on mounting ... warning log in System recorded
+# Get-EventLog -LogName System -EntryType Warning -InstanceId 219 -Newest 1 | fl
+
 #$sourceFIles
 #$mountedISO = Compare-Object (Get-Volume) $beforeMount | select -ExpandProperty Inputobject
 $mountedISO = Get-Volume | ? { $_.DriveType -eq "CD-ROM" -and $_.OperationalStatus -eq "OK" -and $_.DriveLetter }
@@ -56,7 +59,7 @@ Get-ChildItem $copyDestination -Recurse | Set-ItemProperty -Name isReadOnly -Val
 $bootFile = "$copyDestination\BOOT.CFG"
 $bootFileTitle = Get-Content $bootFile | Select-String "title"
 $time = (Get-Date -f "HHmmss")
-$newBootFileContent = (Get-Content $bootFile).Replace($bootFileTitle,"title=Loading ESXi installer using kickstart file $time").Replace("kernelopt=cdromBoot runweasel", "kernelopt=cdromBoot runweasel ks=cdrom:/KS_MILAN.CFG")
+$newBootFileContent = (Get-Content $bootFile).Replace($bootFileTitle, "title=Loading ESXi installer using kickstart file $time").Replace("kernelopt=cdromBoot runweasel", "kernelopt=cdromBoot runweasel ks=cdrom:/KS_MILAN.CFG")
 Set-Content $bootFile -Value $newBootFileContent -Force
 New-Item -ItemType File -Path $copyDestination -Name "ks_milan.cfg" -Value ($KS_CUSTOM | Out-String)
 code "$copyDestination\ks_milan.cfg"
@@ -64,7 +67,7 @@ code "$copyDestination\ks_milan.cfg"
 $isoSourceFiles = "/mnt/" + $copyDestination.Replace("\", "/").replace(":", "")
 #$isoSourceFiles = "/mnt/d/iso/tmp/ESXI-6.7.0-20181002001-STANDARD"
 
-$isoDestinationFile = "/mnt/d/iso/tmp/"+$hostname+".iso"
+$isoDestinationFile = "/mnt/d/iso/tmp/" + $hostname + ".iso"
 $rCommand = "genisoimage -relaxed-filenames -J -R -o $isoDestinationFile -b ISOLINUX.BIN -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFIBOOT.IMG -no-emul-boot $isoSourceFiles"
 
 # sudo apt-get install genisoimage
