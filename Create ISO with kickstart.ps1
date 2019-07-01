@@ -1,4 +1,7 @@
-$ESXiHosts = @(("e671-1.test.ad", "192.168.2.30"), ("e671-2.test.ad", "192.168.2.33"), ("e671-3.test.ad", "192.168.2.34"))
+$ESXiHosts = @(
+    ("e671-1.test.ad", "192.168.2.30"),
+    ("e671-2.test.ad", "192.168.2.33"),
+    ("e671-3.test.ad", "192.168.2.34"))
 foreach ($esxi in $ESXiHosts) {
     $hostname = $esxi[0]
     $ip = $esxi[1]
@@ -37,13 +40,25 @@ esxcli system maintenanceMode set -e true
 esxcli system shutdown reboot -d 15 -r "rebooting after ESXi host configuration"
 "@
 
-#$esxiIsoFile = Get-ChildItem D:\iso | Out-GridView -Title "Choose ISO to mount" -PassThru
-$esxiIsoFile = "D:\iso\VMware-VMvisor-Installer-6.7.0.update01-10302608.x86_64.iso"
+if (($pathToISOFiles = Read-Host "Enter ISO folder path (default D:\iso)") -eq '') { $pathToISOFiles = "D:\iso" } else { $pathToISOFiles | Out-Null }
+$esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware*.iso
+if ($esxiIsoFile -is [array]) {
+    Write-host -ForegroundColor Cyan "INFO: Multiple files detected."
+    $a = 1
+    foreach ($item in $esxiIsoFile ) {
+        Write-host "[$a] $($item.Name)" #$($item.gettype().Name) Parent:$($item.parent)"
+        $a++
+    }
+    $select = Read-host -Prompt "Please choose number"
+    while ([array](1..$a) -notcontains $select) { $select = Read-host -Prompt "Please choose number" }
+    $esxiIsoFile = $esxiIsoFile.Item($select - 1)
+}
 
-#add menu for chosing iso
+#$esxiIsoFile = "D:\iso\VMware-VMvisor-Installer-6.7.0.update01-10302608.x86_64.iso"
+
 #$beforeMount = Get-Volume
 Mount-DiskImage -ImagePath $esxiIsoFile -StorageType ISO -Access ReadOnly
-# I have problems mounting ISO file on Win10 Build:17134 Version: 10.0.17134, it gets stuck on mounting ... warning log in System recorded
+# After sucefully mounting few times I have now problems mounting ISO file on Win10 Build:17134 Version: 10.0.17134, it gets stuck on mounting ... warning log in System recorded
 # Get-EventLog -LogName System -EntryType Warning -InstanceId 219 -Newest 1 | fl
 
 #$sourceFIles
