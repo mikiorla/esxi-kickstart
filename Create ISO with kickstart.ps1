@@ -50,7 +50,7 @@ Mount-DiskImage -ImagePath $esxiIsoFile -StorageType ISO -Access ReadOnly
 #$mountedISO = Compare-Object (Get-Volume) $beforeMount | select -ExpandProperty Inputobject
 $mountedISO = Get-Volume | ? { $_.DriveType -eq "CD-ROM" -and $_.OperationalStatus -eq "OK" -and $_.DriveLetter }
 
-$copyDestination = "d:\iso\tmp\" + $mountedISO.FileSystemLabel
+$copyDestination = "d:\iso\tmp\" + $mountedISO.FileSystemLabel # copy destination folder name
 Copy-Item (Get-PSDrive $mountedISO.DriveLetter).root -Recurse -Destination $copyDestination -Force
 Dismount-DiskImage -ImagePath $esxiIsoFile
 
