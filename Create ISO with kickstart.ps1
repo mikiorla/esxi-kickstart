@@ -40,7 +40,7 @@ esxcli system maintenanceMode set -e true
 esxcli system shutdown reboot -d 15 -r "rebooting after ESXi host configuration"
 "@
 
-if (($pathToISOFiles = Read-Host "Enter ISO folder path (default D:\iso)") -eq '') { $pathToISOFiles = "D:\iso" } else { $pathToISOFiles | Out-Null }
+if (($pathToISOFiles = Read-Host "Enter ISO folder path (default D:\iso)") -eq '') { $pathToISOFiles = "d:\iso"; $pathToISOFiles.ToLower() } else { $pathToISOFiles.ToLower() | Out-Null }
 $esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware*.iso
 if ($esxiIsoFile -is [array]) {
     Write-host -ForegroundColor Cyan "INFO: Multiple files detected."
@@ -53,8 +53,6 @@ if ($esxiIsoFile -is [array]) {
     while ([array](1..$a) -notcontains $select) { $select = Read-host -Prompt "Please choose number" }
     $esxiIsoFile = $esxiIsoFile.Item($select - 1)
 }
-
-#$esxiIsoFile = "D:\iso\VMware-VMvisor-Installer-6.7.0.update01-10302608.x86_64.iso"
 
 #$beforeMount = Get-Volume
 Mount-DiskImage -ImagePath $esxiIsoFile -StorageType ISO -Access ReadOnly
