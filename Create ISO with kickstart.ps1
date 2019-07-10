@@ -40,7 +40,7 @@ esxcli system maintenanceMode set -e true
 esxcli system shutdown reboot -d 15 -r "rebooting after ESXi host configuration"
 "@
 
-if (($pathToISOFiles = Read-Host "Enter ISO folder path (default D:\iso)") -eq '') { $pathToISOFiles = "d:\iso"; $pathToISOFiles.ToLower() } else { $pathToISOFiles.ToLower() | Out-Null }
+if (($pathToISOFiles = Read-Host "Enter ISO folder path (default e:\iso)") -eq '') { $pathToISOFiles = "e:\iso"; $pathToISOFiles.ToLower() } else { $pathToISOFiles.ToLower() | Out-Null }
 $pathToISOFiles = $pathToISOFiles.ToLower()
 $esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware*.iso
 if ($esxiIsoFile -is [array]) {
@@ -72,10 +72,12 @@ Dismount-DiskImage -ImagePath $esxiIsoFile
 #Get-ChildItem $copyDestination
 Get-ChildItem $copyDestination -Recurse | Set-ItemProperty -Name isReadOnly -Value $false -ErrorAction SilentlyContinue
 $bootFile = "$copyDestination\BOOT.CFG"
+$bootFileEFI = "$copyDestination\EFI\BOOT\BOOT.CFG"
 $bootFileTitle = Get-Content $bootFile | Select-String "title"
 $time = (Get-Date -f "HHmmss")
 $newBootFileContent = (Get-Content $bootFile).Replace($bootFileTitle, "title=Loading ESXi installer using kickstart file $time").Replace("kernelopt=cdromBoot runweasel", "kernelopt=cdromBoot runweasel ks=cdrom:/KS_MILAN.CFG")
 Set-Content $bootFile -Value $newBootFileContent -Force
+Set-Content $bootFileEFI -Value $newBootFileContent -Force
 New-Item -ItemType File -Path $copyDestination -Name "ks_milan.cfg" -Value ($KS_CUSTOM | Out-String)
 #code "$copyDestination\ks_milan.cfg" #review file
 
@@ -91,7 +93,7 @@ wsl bash -c $rCommand
 
 wsl bash -c "scp $isoDestinationFilePath root@192.168.2.20:/vmfs/volumes/datastore1"
 
-wsl bash -c "scp /mnt/e/iso/tmp/e671-2.test.ad.iso root@192.168.2.20:/vmfs/volumes/datastore1"
+#wsl bash -c "scp /mnt/e/iso/tmp/e671-2.test.ad.iso root@192.168.2.20:/vmfs/volumes/datastore1"
 
 #Get-Item $isoDestinationFile
 <#
