@@ -7,8 +7,8 @@ foreach ($esxi in $ESXiHosts) {
     $ip = $esxi[1]
 }
 
-$ip = "192.168.2.30"
-$hostname = "e671-1.test.ad"
+$ip = "192.168.2.33"
+$hostname = "e671-2.test.ad"
 $KS_CUSTOM = @"
 ### Accept the VMware End User License Agreement
 vmaccepteula
@@ -60,5 +60,5 @@ $rCommand = "genisoimage -relaxed-filenames -J -R -o $isoDestinationFile -b ISOL
 
 # sudo apt-get install genisoimage
 wsl bash -c $rCommand
-#wsl bash -c "scp $isoDestinationFile root@192.168.2.20:/vmfs/volumes/datastore1/" 
+#wsl bash -c "scp $isoDestinationFile root@192.168.2.20:/vmfs/volumes/datastore1/"
 
