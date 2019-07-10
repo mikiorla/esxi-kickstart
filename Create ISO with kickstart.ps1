@@ -7,8 +7,8 @@ foreach ($esxi in $ESXiHosts) {
     $ip = $esxi[1]
 }
 
-$ip = "192.168.2.30"
-$hostname = "e671-1.test.ad"
+$ip = "192.168.2.33"
+$hostname = "e671-2.test.ad"
 $KS_CUSTOM = @"
 ### Accept the VMware End User License Agreement
 vmaccepteula
@@ -41,6 +41,7 @@ esxcli system shutdown reboot -d 15 -r "rebooting after ESXi host configuration"
 "@
 
 if (($pathToISOFiles = Read-Host "Enter ISO folder path (default D:\iso)") -eq '') { $pathToISOFiles = "d:\iso"; $pathToISOFiles.ToLower() } else { $pathToISOFiles.ToLower() | Out-Null }
+$pathToISOFiles=$pathToISOFiles.ToLower()
 $esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware*.iso
 if ($esxiIsoFile -is [array]) {
     Write-host -ForegroundColor Cyan "INFO: Multiple files detected."
@@ -63,7 +64,8 @@ Mount-DiskImage -ImagePath $esxiIsoFile -StorageType ISO -Access ReadOnly
 #$mountedISO = Compare-Object (Get-Volume) $beforeMount | select -ExpandProperty Inputobject
 $mountedISO = Get-Volume | ? { $_.DriveType -eq "CD-ROM" -and $_.OperationalStatus -eq "OK" -and $_.DriveLetter }
 
-$copyDestination = "d:\iso\tmp\" + $mountedISO.FileSystemLabel # copy destination folder name
+$copyDestination = $pathToISOFiles + "\tmp\" + $mountedISO.FileSystemLabel # copy destination folder name
+# to do:check if folder already exist, if yes delete or increment
 Copy-Item (Get-PSDrive $mountedISO.DriveLetter).root -Recurse -Destination $copyDestination -Force
 Dismount-DiskImage -ImagePath $esxiIsoFile
 
@@ -75,17 +77,19 @@ $time = (Get-Date -f "HHmmss")
 $newBootFileContent = (Get-Content $bootFile).Replace($bootFileTitle, "title=Loading ESXi installer using kickstart file $time").Replace("kernelopt=cdromBoot runweasel", "kernelopt=cdromBoot runweasel ks=cdrom:/KS_MILAN.CFG")
 Set-Content $bootFile -Value $newBootFileContent -Force
 New-Item -ItemType File -Path $copyDestination -Name "ks_milan.cfg" -Value ($KS_CUSTOM | Out-String)
-code "$copyDestination\ks_milan.cfg"
+code "$copyDestination\ks_milan.cfg" #review file
 
-$isoSourceFiles = "/mnt/" + $copyDestination.Replace("\", "/").replace(":", "")
+$isoSourceFiles = "/mnt/" + $copyDestination.Replace("\","/").replace(":", "")
 #$isoSourceFiles = "/mnt/d/iso/tmp/ESXI-6.7.0-20181002001-STANDARD"
-
-$isoDestinationFile = "/mnt/d/iso/tmp/" + $hostname + ".iso"
-$rCommand = "genisoimage -relaxed-filenames -J -R -o $isoDestinationFile -b ISOLINUX.BIN -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFIBOOT.IMG -no-emul-boot $isoSourceFiles"
+$isoDestinationFile = $hostname + ".iso"
+$isoDestinationFilePath = "/mnt/" + $pathToISOFiles.Replace("\", "/").replace(":", "") + "/tmp/" + $isoDestinationFile
+$rCommand = "genisoimage -relaxed-filenames -J -R -o $isoDestinationFilePath -b ISOLINUX.BIN -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFIBOOT.IMG -no-emul-boot $isoSourceFiles"
 
 # sudo apt-get install genisoimage
 wsl bash -c $rCommand
 #wsl bash -c "scp $isoDestinationFile root@192.168.2.20:/vmfs/volumes/datastore1/" #VMware1!
+
+wsl bash -c "scp $isoDestinationFilePath root@192.168.2.20:/vmfs/volumes/datastore1"
 
 Get-Item $isoDestinationFile
 
