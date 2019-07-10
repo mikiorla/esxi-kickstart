@@ -41,7 +41,7 @@ esxcli system shutdown reboot -d 15 -r "rebooting after ESXi host configuration"
 "@
 
 if (($pathToISOFiles = Read-Host "Enter ISO folder path (default D:\iso)") -eq '') { $pathToISOFiles = "d:\iso"; $pathToISOFiles.ToLower() } else { $pathToISOFiles.ToLower() | Out-Null }
-$pathToISOFiles=$pathToISOFiles.ToLower()
+$pathToISOFiles = $pathToISOFiles.ToLower()
 $esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware*.iso
 if ($esxiIsoFile -is [array]) {
     Write-host -ForegroundColor Cyan "INFO: Multiple files detected."
@@ -77,9 +77,9 @@ $time = (Get-Date -f "HHmmss")
 $newBootFileContent = (Get-Content $bootFile).Replace($bootFileTitle, "title=Loading ESXi installer using kickstart file $time").Replace("kernelopt=cdromBoot runweasel", "kernelopt=cdromBoot runweasel ks=cdrom:/KS_MILAN.CFG")
 Set-Content $bootFile -Value $newBootFileContent -Force
 New-Item -ItemType File -Path $copyDestination -Name "ks_milan.cfg" -Value ($KS_CUSTOM | Out-String)
-code "$copyDestination\ks_milan.cfg" #review file
+#code "$copyDestination\ks_milan.cfg" #review file
 
-$isoSourceFiles = "/mnt/" + $copyDestination.Replace("\","/").replace(":", "")
+$isoSourceFiles = "/mnt/" + $copyDestination.Replace("\", "/").replace(":", "")
 #$isoSourceFiles = "/mnt/d/iso/tmp/ESXI-6.7.0-20181002001-STANDARD"
 $isoDestinationFile = $hostname + ".iso"
 $isoDestinationFilePath = "/mnt/" + $pathToISOFiles.Replace("\", "/").replace(":", "") + "/tmp/" + $isoDestinationFile
@@ -91,8 +91,10 @@ wsl bash -c $rCommand
 
 wsl bash -c "scp $isoDestinationFilePath root@192.168.2.20:/vmfs/volumes/datastore1"
 
-Get-Item $isoDestinationFile
+wsl bash -c "scp /mnt/e/iso/tmp/e671-2.test.ad.iso root@192.168.2.20:/vmfs/volumes/datastore1"
 
+#Get-Item $isoDestinationFile
+<#
 #region ...with PSCore Remoting
 #new-pssession
 $c7Session = New-PSSession -HostName 10.20.30.100 -UserName root -KeyFilePath C:\Users\morlovic\.ssh\c7droot
@@ -111,3 +113,5 @@ Invoke-Command -Session $c7Session -ScriptBlock $rCommand
 
 wsl bash -c "lsb_release -a"
 #endregion
+
+#>
