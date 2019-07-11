@@ -89,31 +89,6 @@ $rCommand = "genisoimage -relaxed-filenames -J -R -o $isoDestinationFilePath -b 
 
 # sudo apt-get install genisoimage
 wsl bash -c $rCommand
-#wsl bash -c "scp $isoDestinationFile root@192.168.2.20:/vmfs/volumes/datastore1/" #VMware1!
 
-wsl bash -c "scp $isoDestinationFilePath root@192.168.2.20:/vmfs/volumes/datastore1"
+#wsl bash -c "scp $isoDestinationFilePath root@192.168.2.20:/vmfs/volumes/datastore1"
 
-#wsl bash -c "scp /mnt/e/iso/tmp/e671-2.test.ad.iso root@192.168.2.20:/vmfs/volumes/datastore1"
-
-#Get-Item $isoDestinationFile
-<#
-#region ...with PSCore Remoting
-#new-pssession
-$c7Session = New-PSSession -HostName 10.20.30.100 -UserName root -KeyFilePath C:\Users\morlovic\.ssh\c7droot
-
-#foreach esxi command
-$pathIsoFilesToExport = "/home/iso2export/tmp"
-$pathKsFile = "/home/iso2export/tmp/ks_milan.cfg"
-
-Invoke-Command -Session $c7Session -ScriptBlock { ls -l $using:pathKsFile }
-Invoke-Command -Session $c7Session -ScriptBlock { cat $using:pathKsFile }
-
-#edit ks file respectively
-
-$rCommand = { genisoimage -relaxed-filenames -J -R -o /home/custom_esxi_$using:hostName.iso -b isolinux.bin -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e efiboot.img -no-emul-boot $using:pathIsoFilesToExport }
-Invoke-Command -Session $c7Session -ScriptBlock $rCommand
-
-wsl bash -c "lsb_release -a"
-#endregion
-
-#>
