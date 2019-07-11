@@ -6,6 +6,7 @@ It uses <a href="https://docs.microsoft.com/en-us/windows/wsl/install-win10"> WS
 Installation and Upgrade Script Commands: <a href="https://docs.vmware.com/en/VMware-vSphere/6.7/com.vmware.esxi.upgrade.doc/GUID-61A14EBB-5CF3-43EE-87EF-DB8EC6D83698.html"> Checkout </a> on VMware site.
 
 Hostname and IP that will be included in kickstart need to be customized (also other options like gateway or subnetmask can be included).
+
 Kickstart options are definied in multiline string $KS_CUSTOM.
 
 
