@@ -1,14 +1,14 @@
+
 $ESXiHosts = @(
-    ("e671-1.test.ad", "192.168.2.30"),
-    ("e671-2.test.ad", "192.168.2.33"),
-    ("e671-3.test.ad", "192.168.2.34"))
+    @("e671-1.test.ad", "192.168.2.30"),
+    @("e671-2.test.ad", "192.168.2.33"),
+    @("e671-3.test.ad", "192.168.2.34"))
+
+$remember_pathToISOFiles,$remember_esxiISOFile=$null
 foreach ($esxi in $ESXiHosts) {
     $hostname = $esxi[0]
     $ip = $esxi[1]
-}
 
-$ip = "192.168.2.33"
-$hostname = "e671-2.test.ad"
 $KS_CUSTOM = @"
 ### Accept the VMware End User License Agreement
 vmaccepteula
@@ -40,11 +40,18 @@ esxcli system maintenanceMode set -e true
 esxcli system shutdown reboot -d 15 -r "rebooting after ESXi host configuration"
 "@
 
-if (($pathToISOFiles = Read-Host "Enter ISO folder path (default e:\iso)") -eq '') { $pathToISOFiles = "e:\iso"; $pathToISOFiles.ToLower() } else { $pathToISOFiles.ToLower() | Out-Null }
+if (-not $remember_pathToISOFiles) {
+if (($pathToISOFiles = Read-Host "Enter ISO folder path (default e:\iso)") -eq '') { $pathToISOFiles = "e:\iso"; $pathToISOFiles.ToLower() } else { $pathToISOFiles.ToLower() | Out-Null}
+$remember_pathToISOFiles = $pathToISOFiles
+}
+else {Write-Host -ForegroundColor Cyan "[ok] path to ISO file already choosed"}
+
 $pathToISOFiles = $pathToISOFiles.ToLower()
+
+if (-not $remember_esxiISOFile) {
 $esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware*.iso
 if ($esxiIsoFile -is [array]) {
-    Write-host -ForegroundColor Cyan "INFO: Multiple files detected."
+    Write-host -ForegroundColor Cyan "INFO: Multiple files detected. Select one."
     $a = 1
     foreach ($item in $esxiIsoFile ) {
         Write-host "[$a] $($item.Name)" #$($item.gettype().Name) Parent:$($item.parent)"
@@ -53,20 +60,23 @@ if ($esxiIsoFile -is [array]) {
     $select = Read-host -Prompt "Please choose number"
     while ([array](1..$a) -notcontains $select) { $select = Read-host -Prompt "Please choose number" }
     $esxiIsoFile = $esxiIsoFile.Item($select - 1)
+    $remember_esxiISOFile = $esxiIsoFile
 }
+} else {Write-Host -ForegroundColor Cyan "[ok] esxi ISO file already choosed"}
 
+Write-Host -ForegroundColor Cyan "[acition] Mounting $esxiIsoFile"
 #$beforeMount = Get-Volume
 Mount-DiskImage -ImagePath $esxiIsoFile -StorageType ISO -Access ReadOnly
 # After sucefully mounting few times I have now problems mounting ISO file on Win10 Build:17134 Version: 10.0.17134, it gets stuck on mounting ... warning log in System recorded
 # Get-EventLog -LogName System -EntryType Warning -InstanceId 219 -Newest 1 | fl
 
-#$sourceFIles
 #$mountedISO = Compare-Object (Get-Volume) $beforeMount | select -ExpandProperty Inputobject
 $mountedISO = Get-Volume | ? { $_.DriveType -eq "CD-ROM" -and $_.OperationalStatus -eq "OK" -and $_.DriveLetter }
 
 $copyDestination = $pathToISOFiles + "\tmp\" + $mountedISO.FileSystemLabel # copy destination folder name
 # to do:check if folder already exist, if yes delete or increment
 Copy-Item (Get-PSDrive $mountedISO.DriveLetter).root -Recurse -Destination $copyDestination -Force
+Write-Host -ForegroundColor Cyan "[acition] Dismount-DiskImage $esxiIsoFile"
 Dismount-DiskImage -ImagePath $esxiIsoFile
 
 #Get-ChildItem $copyDestination
@@ -91,4 +101,6 @@ $rCommand = "genisoimage -relaxed-filenames -J -R -o $isoDestinationFilePath -b 
 wsl bash -c $rCommand
 
 #wsl bash -c "scp $isoDestinationFilePath root@192.168.2.20:/vmfs/volumes/datastore1"
-
+Write-Host -ForegroundColor Cyan "[action] deleting folder $copyDestination"
+Remove-Item $copyDestination -Recurse -Force
+}
