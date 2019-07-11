@@ -7,7 +7,7 @@ Installation and Upgrade Script commands <a href="https://docs.vmware.com/en/VMw
 
 Hostname and IP that will be included in kickstart need to be customized (also other options like gateway or subnetmask can be included).
 
-Kickstart options are definied in multiline string $KS_CUSTOM.
+Kickstart options are definied in multiline string variable KS_CUSTOM.
 
 
 
