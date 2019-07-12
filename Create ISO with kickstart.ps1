@@ -1,4 +1,4 @@
-
+#Requires -Version 5.1
 $ESXiHosts = @(
     @("e671-1.test.ad", "192.168.2.30"),
     @("e671-2.test.ad", "192.168.2.33"),
