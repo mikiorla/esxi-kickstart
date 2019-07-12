@@ -9,6 +9,8 @@ Hostname and IP that will be included in kickstart need to be customized (also o
 
 Kickstart options are definied in multiline string variable KS_CUSTOM.
 
+Do not change original VMware-VMvisor-Installer-* names.
+
 
 
 
