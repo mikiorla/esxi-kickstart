@@ -4,12 +4,12 @@ $ESXiHosts = @(
     @("e671-2.test.ad", "192.168.2.33"),
     @("e671-3.test.ad", "192.168.2.34"))
 
-$remember_pathToISOFiles,$remember_esxiISOFile=$null
+$remember_pathToISOFiles, $remember_esxiISOFile = $null
 foreach ($esxi in $ESXiHosts) {
     $hostname = $esxi[0]
     $ip = $esxi[1]
 
-    $KS_CUSTOM = @"
+$KS_CUSTOM = @"
 ### Accept the VMware End User License Agreement
 vmaccepteula
 
