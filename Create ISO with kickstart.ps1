@@ -1,15 +1,18 @@
+#Requires -PSEdition Desktop
 #Requires -Version 5.1
+
+if ( -not (Get-Module -ListAvailable Storage)) {Write-Warning "Storage module not found, cannot continue.";break }
 $ESXiHosts = @(
-    @("e671-1.test.ad", "192.168.2.30"),
-    @("e671-2.test.ad", "192.168.2.33"),
-    @("e671-3.test.ad", "192.168.2.34"))
+    ("e671-1.test.ad", "192.168.2.30"),
+    ("e671-2.test.ad", "192.168.2.33"),
+    ("e671-3.test.ad", "192.168.2.34"))
 
 $remember_pathToISOFiles, $remember_esxiISOFile = $null
 foreach ($esxi in $ESXiHosts) {
     $hostname = $esxi[0]
     $ip = $esxi[1]
 
-$KS_CUSTOM = @"
+    $KS_CUSTOM = @"
 ### Accept the VMware End User License Agreement
 vmaccepteula
 
@@ -49,7 +52,7 @@ esxcli system shutdown reboot -d 15 -r "Rebooting one more after ESXi configurat
     $pathToISOFiles = $pathToISOFiles.ToLower()
 
     if (-not $remember_esxiISOFile) {
-        try { $esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware*.iso -ErrorAction Stop }
+        try { $esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware-VMvisor-Installer-*.iso -ErrorAction Stop }
         catch { $_.Exception; break }
         if ($esxiIsoFile -is [array]) {
             Write-host -ForegroundColor Cyan "INFO: Multiple files detected. Select one."
@@ -68,7 +71,7 @@ esxcli system shutdown reboot -d 15 -r "Rebooting one more after ESXi configurat
 
     Write-Host -ForegroundColor Cyan "[acition] Mounting $esxiIsoFile"
     #$beforeMount = Get-Volume
-    Mount-DiskImage -ImagePath $esxiIsoFile -StorageType ISO -Access ReadOnly
+    try {Mount-DiskImage -ImagePath $esxiIsoFile -StorageType ISO -Access ReadOnly -ErrorAction Stop} catch {$_.exception;break}
     # After sucefully mounting few times I have now problems mounting ISO file on Win10 Build:17134 Version: 10.0.17134, it gets stuck on mounting ... warning log in System recorded
     # Get-EventLog -LogName System -EntryType Warning -InstanceId 219 -Newest 1 | fl
     # Problems with 'MIcrosoft Virtual DVD-ROM' if you'r PC doesnt have CD drive
