@@ -41,7 +41,7 @@ esxcli system shutdown reboot -d 15 -r "rebooting after ESXi host configuration"
 "@
 
 if (-not $remember_pathToISOFiles) {
-if (($pathToISOFiles = Read-Host "Enter ISO folder path (default e:\iso)") -eq '') { $pathToISOFiles = "e:\iso"; $pathToISOFiles.ToLower() } else { $pathToISOFiles.ToLower() | Out-Null}
+if (($pathToISOFiles = Read-Host "Enter ISO folder path (default e:\iso)") -eq '') { $pathToISOFiles = "e:\iso";} else { $pathToISOFiles}
 $remember_pathToISOFiles = $pathToISOFiles
 }
 else {Write-Host -ForegroundColor Cyan "[ok] path to ISO file already choosed"}
@@ -49,7 +49,8 @@ else {Write-Host -ForegroundColor Cyan "[ok] path to ISO file already choosed"}
 $pathToISOFiles = $pathToISOFiles.ToLower()
 
 if (-not $remember_esxiISOFile) {
-$esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware*.iso
+        try { $esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware*.iso -ErrorAction Stop}
+        catch { $_.Exception; break}
 if ($esxiIsoFile -is [array]) {
     Write-host -ForegroundColor Cyan "INFO: Multiple files detected. Select one."
     $a = 1
