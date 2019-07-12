@@ -37,7 +37,7 @@ esxcli system settings advanced set -o /UserVars/HostClientCEIPOptIn -i 2
 ### Enable maintaince mode
 esxcli system maintenanceMode set -e true
 ### Reboot
-esxcli system shutdown reboot -d 15 -r "rebooting after ESXi host configuration"
+esxcli system shutdown reboot -d 15 -r "Rebooting one more after ESXi configuration"
 "@
 
     if (-not $remember_pathToISOFiles) {
