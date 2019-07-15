@@ -111,3 +111,4 @@ esxcli system shutdown reboot -d 15 -r "Rebooting one more after ESXi configurat
 
     Write-Host -ForegroundColor Cyan "[action] deleting folder $copyDestination"
     Remove-Item $copyDestination -Recurse -Force
+    
