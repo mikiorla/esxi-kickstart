@@ -2,11 +2,14 @@
 #Requires -Version 5.1
 
 if ( -not (Get-Module -ListAvailable Storage)) { Write-Warning "Storage module not found, cannot continue."; break }
-$ESXiHosts = @(
-    ("e671-1.test.ad", "192.168.2.30"),
-    ("e671-2.test.ad", "192.168.2.33"),
-    ("e671-3.test.ad", "192.168.2.34"))
-
+$esxiHosts = '{
+        "esxiHosts":[
+        { "Name":"esxi1", "ip":"192.168.2.11" },
+        { "Name":"esxi2", "ip":"192.168.2.12" },
+        { "Name":"esxi3", "ip":"192.168.2.13" }
+        ]
+    }'
+$esxiHosts = $esxiHosts|ConvertFrom-Json #create object to work with
 if (($pathToISOFiles = Read-Host "Enter ISO folder path (default e:\iso)") -eq '') { $pathToISOFiles = "e:\iso"; } else { $pathToISOFiles }
 try { $esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware-VMvisor-Installer-*.iso -ErrorAction Stop }
 catch { $_.Exception; break }
@@ -44,9 +47,9 @@ Dismount-DiskImage -ImagePath $esxiIsoFile
 Write-Host -ForegroundColor Cyan "[action] Set files as rw"
 Get-ChildItem $copyDestination -Recurse | Set-ItemProperty -Name isReadOnly -Value $false -ErrorAction SilentlyContinue
 
-foreach ($esxi in $ESXiHosts) {
-    $hostname = $esxi[0]
-    $ip = $esxi[1]
+foreach ($esxi in $ESXiHosts.esxiHosts) {
+    $hostname = $esxi.Name
+    $ip = $esxi.ip
 
     $KS_CUSTOM = @"
 ### Accept the VMware End User License Agreement
@@ -111,4 +114,3 @@ esxcli system shutdown reboot -d 15 -r "Rebooting one more after ESXi configurat
 
     Write-Host -ForegroundColor Cyan "[action] deleting folder $copyDestination"
     Remove-Item $copyDestination -Recurse -Force
-    
