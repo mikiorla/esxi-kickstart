@@ -11,7 +11,7 @@ function New-ISOWithKickstart {
     begin {
         $esxiHosts = '{
         "esxiHosts":[
-         { "Name":"esxi1", "ip":"ip1" }
+         { "Name":"esxi1", "ip":"ip1", "gateway":"ip1a" }
         ]
     }'
 
@@ -89,6 +89,7 @@ function New-ISOWithKickstart {
         foreach ($esxi in $ESXiHosts.esxiHosts) {
             $hostname = $esxi.Name
             $ip = $esxi.ip
+            $gw =$esxi.gateway
 
             $KS_CUSTOM = @"
 ### Accept the VMware End User License Agreement
@@ -101,7 +102,7 @@ rootpw VMware1!
 install --firstdisk --overwritevmfs
 
 ### Set the network to  on the first network adapter
-network --bootproto=static --device=vmnic0 --ip=$ip --netmask=255.255.255.0 --gateway=10.28.80.254 --nameserver=10.28.91.10 --hostname=$hostname --addvmportgroup=0 --vlanid=80
+network --bootproto=static --device=vmnic0 --ip=$ip --netmask=255.255.255.0 --gateway=$gw --nameserver=10.28.91.10 --hostname=$hostname --addvmportgroup=0 --vlanid=80
 
 ### Reboot ESXi Host
 #reboot --noeject # --eject doesnt exist
