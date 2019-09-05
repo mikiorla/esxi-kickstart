@@ -1,17 +1,20 @@
 #Requires -PSEdition Desktop
 #Requires -Version 5.1
 
-if ( -not (Get-Module -ListAvailable Storage)) { Write-Warning "Storage module not found, cannot continue."; break }
 $esxiHosts = '{
         "esxiHosts":[
-        { "Name":"esxi1", "ip":"192.168.2.11" },
-        { "Name":"esxi2", "ip":"192.168.2.12" },
-        { "Name":"esxi3", "ip":"192.168.2.13" }
+        { "Name":"	prd-esx-de-muc-els50",
+          "ip":"10.28.80.120" }
+
+
         ]
     }'
+
+if ( -not (Get-Module -ListAvailable Storage)) { Write-Warning "Storage module not found, cannot continue."; break }
+
 $esxiHosts = $esxiHosts|ConvertFrom-Json #create object to work with
 if (($pathToISOFiles = Read-Host "Enter ISO folder path (default e:\iso)") -eq '') { $pathToISOFiles = "e:\iso"; } else { $pathToISOFiles }
-try { $esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware-VMvisor-Installer-*.iso -ErrorAction Stop }
+try { $esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware*.iso -ErrorAction Stop }
 catch { $_.Exception; break }
 if ($esxiIsoFile -is [array]) {
     Write-host -ForegroundColor Cyan "INFO: Multiple files detected. Select one."
@@ -27,7 +30,7 @@ if ($esxiIsoFile -is [array]) {
 
 #$beforeMount = Get-Volume
 Write-Host -ForegroundColor Cyan "[action] Mounting $esxiIsoFile"
-try { Mount-DiskImage -ImagePath $esxiIsoFile -StorageType ISO -Access ReadOnly -ErrorAction Stop } catch { $_.exception; break }
+try { Mount-DiskImage -ImagePath $esxiIsoFile -StorageType ISO -Access ReadOnly -ErrorAction Stop} catch { $_.exception; break }
 # After sucefully mounting few times I have now problems mounting ISO file on Win10 Build:17134 Version: 10.0.17134, it gets stuck on mounting ... warning log in System recorded
 # Get-EventLog -LogName System -EntryType Warning -InstanceId 219 -Newest 1 | fl
 # Problems with 'MIcrosoft Virtual DVD-ROM' if you'r PC doesnt have CD drive
@@ -62,7 +65,7 @@ rootpw VMware1!
 install --firstdisk --overwritevmfs
 
 ### Set the network to  on the first network adapter
-network --bootproto=static --device=vmnic0 --ip=$ip --netmask=255.255.255.0 --gateway=192.168.2.1 --nameserver=192.168.2.40 --hostname=$hostname --addvmportgroup=0
+network --bootproto=static --device=vmnic0 --ip=$ip --netmask=255.255.255.0 --gateway=10.28.80 --nameserver=192.168.2.40 --hostname=$hostname --addvmportgroup=0 --vlanid=80
 
 ### Reboot ESXi Host
 #reboot --noeject # --eject doesnt exist
@@ -72,7 +75,7 @@ reboot
 # If multiple %firstboot sections are specified,
 #  they run in the order that they appear in the kickstart file.
 %firstboot --interpreter=busybox
-esxcli network ip dns search add --domain=test.ad
+esxcli network ip dns search add --domain=hosting.matrix.ag
 esxcli network ip set --ipv6-enabled=false
 ### Disable CEIP
 esxcli system settings advanced set -o /UserVars/HostClientCEIPOptIn -i 2
@@ -101,7 +104,7 @@ esxcli system shutdown reboot -d 15 -r "Rebooting one more after ESXi configurat
 
     $isoSourceFiles = "/mnt/" + $copyDestination.Replace("\", "/").replace(":", "")
     #$isoSourceFiles = "/mnt/d/iso/tmp/ESXI-6.7.0-20181002001-STANDARD"
-    $isoDestinationFile = $hostname + ".iso"
+    $isoDestinationFile = $hostname.replace("-","_") + ".iso"
     $isoDestinationFilePath = "/mnt/" + $pathToISOFiles.Replace("\", "/").replace(":", "") + "/tmp/" + $isoDestinationFile
     $rCommand = "genisoimage -relaxed-filenames -J -R -o $isoDestinationFilePath -b ISOLINUX.BIN -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFIBOOT.IMG -no-emul-boot $isoSourceFiles"
 
