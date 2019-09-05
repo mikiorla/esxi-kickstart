@@ -62,7 +62,7 @@ rootpw VMware1!
 install --firstdisk --overwritevmfs
 
 ### Set the network to  on the first network adapter
-network --bootproto=static --device=vmnic0 --ip=$ip --netmask=255.255.255.0 --gateway=10.28.80 --nameserver=192.168.2.40 --hostname=$hostname --addvmportgroup=0 --vlanid=80
+network --bootproto=static --device=vmnic0 --ip=$ip --netmask=255.255.255.0 --gateway=192.168.2.20 --nameserver=192.168.2.40 --hostname=$hostname --addvmportgroup=0 --vlanid=80
 
 ### Reboot ESXi Host
 #reboot --noeject # --eject doesnt exist
@@ -72,7 +72,7 @@ reboot
 # If multiple %firstboot sections are specified,
 #  they run in the order that they appear in the kickstart file.
 %firstboot --interpreter=busybox
-esxcli network ip dns search add --domain=hosting.matrix.ag
+esxcli network ip dns search add --domain=serachdomain
 esxcli network ip set --ipv6-enabled=false
 ### Disable CEIP
 esxcli system settings advanced set -o /UserVars/HostClientCEIPOptIn -i 2
