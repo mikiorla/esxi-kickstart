@@ -7,11 +7,11 @@ function New-ISOWithKickstart {
         [Parameter(Mandatory = $false)]
         $CopyFilesFormPath
     )
-    #{ "Name":"prd-esx-de-muc-els50", "ip":"10.28.80.120" },
+    #{ "Name":"esxi2", "ip":"ip2" },
     begin {
         $esxiHosts = '{
         "esxiHosts":[
-         { "Name":"prd-esx-de-muc-els51", "ip":"10.28.80.121" }
+         { "Name":"esxi1", "ip":"ip1" }
         ]
     }'
 
