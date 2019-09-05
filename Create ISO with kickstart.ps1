@@ -3,10 +3,7 @@
 
 $esxiHosts = '{
         "esxiHosts":[
-        { "Name":"esxi1",
-          "ip":"ip1" }
-
-
+        { "Name":"esxi1", "ip":"ip1" }
         ]
     }'
 
