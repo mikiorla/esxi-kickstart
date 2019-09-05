@@ -1,59 +1,96 @@
 #Requires -PSEdition Desktop
 #Requires -Version 5.1
 
-$esxiHosts = '{
+function New-ISOWithKickstart {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $false)]
+        $CopyFilesFormPath
+    )
+    #{ "Name":"prd-esx-de-muc-els50", "ip":"10.28.80.120" },
+    begin {
+        $esxiHosts = '{
         "esxiHosts":[
-        { "Name":"	prd-esx-de-muc-els50",
-          "ip":"10.28.80.120" }
-
+         { "Name":"prd-esx-de-muc-els51", "ip":"10.28.80.121" }
         ]
     }'
 
-if ( -not (Get-Module -ListAvailable Storage)) { Write-Warning "Storage module not found, cannot continue."; break }
+        if ( -not (Get-Module -ListAvailable Storage)) { Write-Warning "Storage module not found, cannot continue."; break }
 
-$esxiHosts = $esxiHosts|ConvertFrom-Json #create object to work with
-if (($pathToISOFiles = Read-Host "Enter ISO folder path (default e:\iso)") -eq '') { $pathToISOFiles = "e:\iso"; } else { $pathToISOFiles }
-try { $esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware*.iso -ErrorAction Stop }
-catch { $_.Exception; break }
-if ($esxiIsoFile -is [array]) {
-    Write-host -ForegroundColor Cyan "INFO: Multiple files detected. Select one."
-    $a = 1
-    foreach ($item in $esxiIsoFile ) {
-        Write-host "[$a] $($item.Name)" #$($item.gettype().Name) Parent:$($item.parent)"
-        $a++
+
     }
-    $select = Read-host -Prompt "Please choose number"
-    while ([array](1..$a) -notcontains $select) { $select = Read-host -Prompt "Please choose number" }
-    $esxiIsoFile = $esxiIsoFile.Item($select - 1)
-}
 
-#$beforeMount = Get-Volume
-Write-Host -ForegroundColor Cyan "[action] Mounting $esxiIsoFile"
-try { Mount-DiskImage -ImagePath $esxiIsoFile -StorageType ISO -Access ReadOnly -ErrorAction Stop} catch { $_.exception; break }
-# After sucefully mounting few times I have now problems mounting ISO file on Win10 Build:17134 Version: 10.0.17134, it gets stuck on mounting ... warning log in System recorded
-# Get-EventLog -LogName System -EntryType Warning -InstanceId 219 -Newest 1 | fl
-# Problems with 'MIcrosoft Virtual DVD-ROM' if you'r PC doesnt have CD drive
+    process {
 
-#$mountedISO = Compare-Object (Get-Volume) $beforeMount | select -ExpandProperty Inputobject
-$mountedISO = Get-Volume | ? { $_.DriveType -eq "CD-ROM" -and $_.OperationalStatus -eq "OK" -and $_.DriveLetter }
+        $esxiHosts = $esxiHosts | ConvertFrom-Json #create object to work with
 
-$copyDestination = $pathToISOFiles + "\tmp\" + $mountedISO.FileSystemLabel # copy destination folder name
-# to do:check if folder already exist, if yes delete or increment
-Write-Host -ForegroundColor Cyan "[action] Copy mounted files $esxiIsoFile"
-Copy-Item (Get-PSDrive $mountedISO.DriveLetter).root -Recurse -Destination $copyDestination -Force
+        #region choose ISO file
+        if (-not $CopyFilesFormPath) {
 
-Write-Host -ForegroundColor Cyan "[acition] Dismount-DiskImage $esxiIsoFile"
-Dismount-DiskImage -ImagePath $esxiIsoFile
+            if (($pathToISOFiles = Read-Host "Enter ISO folder path (default e:\iso)") -eq '') { $pathToISOFiles = "e:\iso"; } else { $pathToISOFiles }
+            try { $esxiIsoFile = Get-ChildItem $pathToISOFiles\VMware*.iso -ErrorAction Stop }
+            catch { $_.Exception; break }
+            if ($esxiIsoFile -is [array]) {
+                Write-host -ForegroundColor Cyan "INFO: Multiple files detected. Select one."
+                $a = 1
+                foreach ($item in $esxiIsoFile ) {
+                    Write-host "[$a] $($item.Name)" #$($item.gettype().Name) Parent:$($item.parent)"
+                    $a++
+                }
+                $select = Read-host -Prompt "Please choose number"
+                while ([array](1..$a) -notcontains $select) { $select = Read-host -Prompt "Please choose number" }
+                $esxiIsoFile = $esxiIsoFile.Item($select - 1)
+            }
+            #$beforeMount = Get-Volume
+            Write-Host -ForegroundColor Cyan "[action] Mounting $esxiIsoFile"
+            try { Mount-DiskImage -ImagePath $esxiIsoFile -StorageType ISO -Access ReadOnly -ErrorAction Stop } catch { $_.exception; break }
+            # After sucefully mounting few times I have now problems mounting ISO file on Win10 Build:17134 Version: 10.0.17134, it gets stuck on mounting ... warning log in System recorded
+            # Get-EventLog -LogName System -EntryType Warning -InstanceId 219 -Newest 1 | fl
+            # Problems with 'MIcrosoft Virtual DVD-ROM' if you'r PC doesnt have CD drive
 
-#Get-ChildItem $copyDestination
-Write-Host -ForegroundColor Cyan "[action] Set files as rw"
-Get-ChildItem $copyDestination -Recurse | Set-ItemProperty -Name isReadOnly -Value $false -ErrorAction SilentlyContinue
+            #$mountedISO = Compare-Object (Get-Volume) $beforeMount | select -ExpandProperty Inputobject
+            $mountedISO = Get-Volume | ? { $_.DriveType -eq "CD-ROM" -and $_.OperationalStatus -eq "OK" -and $_.DriveLetter }
 
-foreach ($esxi in $ESXiHosts.esxiHosts) {
-    $hostname = $esxi.Name
-    $ip = $esxi.ip
+            $copyDestination = $pathToISOFiles + "\tmp\" + $mountedISO.FileSystemLabel # copy destination folder name
+            # to do:check if folder already exist, if yes delete or increment
+            Write-Host -ForegroundColor Cyan "[action] Copy mounted files $esxiIsoFile"
+            Copy-Item (Get-PSDrive $mountedISO.DriveLetter).root -Recurse -Destination $copyDestination -Force
 
-    $KS_CUSTOM = @"
+        }
+        #endregion
+
+        #region Copy from extracted
+        else {
+            try {
+                $copyDestination = New-Item -ItemType Directory -Name "tmp" -Force
+                $copyDestination = $copyDestination.FullName
+                Write-Host -ForegroundColor Cyan "[action] Copy extracted or mounted files from $CopyFilesFormPath"
+                Copy-Item "$CopyFilesFormPath\*" -Recurse -Destination $copyDestination -Force
+                $pathToISOFiles = $copyDestination
+            }
+            catch {
+                $_.Exception.Message
+                break
+            }
+
+
+        }
+        #endregion
+
+        if (-not $CopyFilesFormPath) {
+            Write-Host -ForegroundColor Cyan "[acition] Dismount-DiskImage $esxiIsoFile"
+            Dismount-DiskImage -ImagePath $esxiIsoFile
+        }
+
+
+        Write-Host -ForegroundColor Cyan "[action] Set files as rw"
+        Get-ChildItem $copyDestination -Recurse | Set-ItemProperty -Name isReadOnly -Value $false -ErrorAction SilentlyContinue
+
+        foreach ($esxi in $ESXiHosts.esxiHosts) {
+            $hostname = $esxi.Name
+            $ip = $esxi.ip
+
+            $KS_CUSTOM = @"
 ### Accept the VMware End User License Agreement
 vmaccepteula
 
@@ -64,7 +101,7 @@ rootpw VMware1!
 install --firstdisk --overwritevmfs
 
 ### Set the network to  on the first network adapter
-network --bootproto=static --device=vmnic0 --ip=$ip --netmask=255.255.255.0 --gateway=10.28.80 --nameserver=192.168.2.40 --hostname=$hostname --addvmportgroup=0 --vlanid=80
+network --bootproto=static --device=vmnic0 --ip=$ip --netmask=255.255.255.0 --gateway=10.28.80.254 --nameserver=10.28.91.10 --hostname=$hostname --addvmportgroup=0 --vlanid=80
 
 ### Reboot ESXi Host
 #reboot --noeject # --eject doesnt exist
@@ -84,35 +121,65 @@ esxcli system maintenanceMode set -e true
 esxcli system shutdown reboot -d 15 -r "Rebooting one more after ESXi configuration"
 "@
 
-    $bootFile = "$copyDestination\BOOT.CFG"
-    $bootFileEFI = "$copyDestination\EFI\BOOT\BOOT.CFG"
-    $bootFileTitle = Get-Content $bootFile | Select-String "title"
-    $time = (Get-Date -f "HHmmss")
-    $newBootFileContent = (Get-Content $bootFile).Replace($bootFileTitle, "title=Loading ESXi installer using kickstart file $time").Replace("kernelopt=cdromBoot runweasel", "kernelopt=cdromBoot runweasel ks=cdrom:/KS_MILAN.CFG")
-    Set-Content $bootFile -Value $newBootFileContent -Force
-    Set-Content $bootFileEFI -Value $newBootFileContent -Force
-    if (Test-Path $copyDestination\"ks_milan.cfg") {
-        Write-Host -ForegroundColor Cyan ". kickstart file already present,seting new value"
-        Set-Content $copyDestination\"ks_milan.cfg" -Value ($KS_CUSTOM | Out-String)
+            $bootFile = "$copyDestination\BOOT.CFG"
+            $bootFileEFI = "$copyDestination\EFI\BOOT\BOOT.CFG"
+            $bootFileTitle = Get-Content $bootFile | Select-String "title"
+            $time = (Get-Date -f "HHmmss")
+            $newBootFileContent = (Get-Content $bootFile).Replace($bootFileTitle, "title=Loading ESXi installer using kickstart file $time").Replace("kernelopt=cdromBoot runweasel", "kernelopt=cdromBoot runweasel ks=cdrom:/KS_MILAN.CFG")
+            Set-Content $bootFile -Value $newBootFileContent -Force
+            Set-Content $bootFileEFI -Value $newBootFileContent -Force
+            if (Test-Path $copyDestination\"ks_milan.cfg") {
+                Write-Host -ForegroundColor Cyan ". kickstart file already present,seting new value"
+                Set-Content $copyDestination\"ks_milan.cfg" -Value ($KS_CUSTOM | Out-String)
+            }
+            else {
+                Write-Host -ForegroundColor Cyan ". creating custom kickstart file"
+                New-Item -ItemType File -Path $copyDestination -Name "ks_milan.cfg" -Value ($KS_CUSTOM | Out-String)
+            }
+
+            #code "$copyDestination\ks_milan.cfg" #review file
+
+            $isoSourceFiles = ("/mnt/" + $copyDestination.Replace("\", "/").replace(":", "")).ToLower()
+            Write-host -Foreg Yellow "isoSourceFiles " -NoNewline; write-host $isoSourceFiles
+            $isoDestinationFile = "$hostname.iso".ToLower()
+            $isoDestinationFilePath = ("/mnt/" + (Get-Location).path.Replace("\", "/").replace(":", "") + "/"+ $isoDestinationFile).ToLower()
+            #$isoDestinationFilePath = "/mnt/" + $pathToISOFiles.Replace("\", "/").replace(":", "") + "/tmp/" + $isoDestinationFile
+            Write-host -fore Yellow "isoDestinationFilePath " -NoNewline; Write-Host $isoDestinationFilePath
+            $rCommand = "genisoimage -relaxed-filenames -J -R -o $isoDestinationFilePath -b ISOLINUX.BIN -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFIBOOT.IMG -no-emul-boot $isoSourceFiles"
+
+            # sudo apt-get install genisoimage
+            wsl bash -c $rCommand
+
+            #wsl bash -c "scp $isoDestinationFilePath root@192.168.2.20:/vmfs/volumes/datastore1"
+        }
+
+        Write-Host -ForegroundColor Cyan "[action] deleting folder $copyDestination"
+        Remove-Item $copyDestination -Recurse -Force
     }
-    else {
-        Write-Host -ForegroundColor Cyan ". creating custom kickstart file"
-        New-Item -ItemType File -Path $copyDestination -Name "ks_milan.cfg" -Value ($KS_CUSTOM | Out-String) }
 
-    #code "$copyDestination\ks_milan.cfg" #review file
-
-    $isoSourceFiles = "/mnt/" + $copyDestination.Replace("\", "/").replace(":", "")
-    #$isoSourceFiles = "/mnt/d/iso/tmp/ESXI-6.7.0-20181002001-STANDARD"
-    $isoDestinationFile = $hostname.replace("-","_") + ".iso"
-    $isoDestinationFilePath = "/mnt/" + $pathToISOFiles.Replace("\", "/").replace(":", "") + "/tmp/" + $isoDestinationFile
-    $rCommand = "genisoimage -relaxed-filenames -J -R -o $isoDestinationFilePath -b ISOLINUX.BIN -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFIBOOT.IMG -no-emul-boot $isoSourceFiles"
-
-    # sudo apt-get install genisoimage
-    wsl bash -c $rCommand
-
-    #wsl bash -c "scp $isoDestinationFilePath root@192.168.2.20:/vmfs/volumes/datastore1"
-
+    end {
+    }
 }
 
-    Write-Host -ForegroundColor Cyan "[action] deleting folder $copyDestination"
-    Remove-Item $copyDestination -Recurse -Force
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
