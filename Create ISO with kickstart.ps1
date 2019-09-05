@@ -3,8 +3,8 @@
 
 $esxiHosts = '{
         "esxiHosts":[
-        { "Name":"	prd-esx-de-muc-els50",
-          "ip":"10.28.80.120" }
+        { "Name":"esxi1",
+          "ip":"ip1" }
 
 
         ]
