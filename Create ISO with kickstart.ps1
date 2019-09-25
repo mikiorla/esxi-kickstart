@@ -9,9 +9,11 @@ function New-ISOWithKickstart {
     )
     #{ "Name":"esxi2", "ip":"ip2" },
     begin {
+        #"Name":"esxi67u3-2", "ip":"10.10.10.20", "gateway":"10.10.10.1" , "dns":"10.10.10.1"
+        #"Name":"esxi67u3-3", "ip":"10.10.10.30", "gateway":"10.10.10.1" , "dns":"10.10.10.1"
         $esxiHosts = '{
         "esxiHosts":[
-         { "Name":"esxi1", "ip":"ip1", "gateway":"ip1a" }
+         {"Name":"esxi67u3-2", "ip":"10.10.10.20", "gateway":"10.10.10.1" , "dns":"10.10.10.1"}
         ]
     }'
 
@@ -89,7 +91,8 @@ function New-ISOWithKickstart {
         foreach ($esxi in $ESXiHosts.esxiHosts) {
             $hostname = $esxi.Name
             $ip = $esxi.ip
-            $gw =$esxi.gateway
+            $dns = $esxi.dns
+            $gw = $esxi.gateway
 
             $KS_CUSTOM = @"
 ### Accept the VMware End User License Agreement
@@ -102,11 +105,11 @@ rootpw VMware1!
 install --firstdisk --overwritevmfs
 
 ### Set the network to  on the first network adapter
-network --bootproto=static --device=vmnic0 --ip=$ip --netmask=255.255.255.0 --gateway=$gw --nameserver=10.28.91.10 --hostname=$hostname --addvmportgroup=0 --vlanid=80
+network --bootproto=static --device=vmnic0 --ip=$ip --netmask=255.255.255.0 --gateway=$gw --nameserver=$dns --hostname=$hostname --addvmportgroup=0 --vlanid=0
 
 ### Reboot ESXi Host
 #reboot --noeject # --eject doesnt exist
-reboot
+reboot --noeject
 #Creates an init script that runs only during the first boot.
 # The script has no effect on subsequent boots.
 # If multiple %firstboot sections are specified,
@@ -130,8 +133,11 @@ esxcli system shutdown reboot -d 15 -r "Rebooting one more after ESXi configurat
             Set-Content $bootFile -Value $newBootFileContent -Force
             Set-Content $bootFileEFI -Value $newBootFileContent -Force
             if (Test-Path $copyDestination\"ks_milan.cfg") {
-                Write-Host -ForegroundColor Cyan ". kickstart file already present,seting new value"
-                Set-Content $copyDestination\"ks_milan.cfg" -Value ($KS_CUSTOM | Out-String)
+                #Write-Host -ForegroundColor Cyan ". kickstart file already present,seting new value"
+                #Set-Content $copyDestination\"ks_milan.cfg" -Value ($KS_CUSTOM | Out-String)
+                Remove-item $copyDestination\"ks_milan.cfg" -Force -Confirm:0
+                Write-Host -ForegroundColor Cyan ". creating custom kickstart file"
+                New-Item -ItemType File -Path $copyDestination -Name "ks_milan.cfg" -Value ($KS_CUSTOM | Out-String)
             }
             else {
                 Write-Host -ForegroundColor Cyan ". creating custom kickstart file"
@@ -143,7 +149,7 @@ esxcli system shutdown reboot -d 15 -r "Rebooting one more after ESXi configurat
             $isoSourceFiles = ("/mnt/" + $copyDestination.Replace("\", "/").replace(":", "")).ToLower()
             Write-host -Foreg Yellow "isoSourceFiles " -NoNewline; write-host $isoSourceFiles
             $isoDestinationFile = "$hostname.iso".ToLower()
-            $isoDestinationFilePath = ("/mnt/" + (Get-Location).path.Replace("\", "/").replace(":", "") + "/"+ $isoDestinationFile).ToLower()
+            $isoDestinationFilePath = ("/mnt/" + (Get-Location).path.Replace("\", "/").replace(":", "") + "/" + $isoDestinationFile).ToLower()
             #$isoDestinationFilePath = "/mnt/" + $pathToISOFiles.Replace("\", "/").replace(":", "") + "/tmp/" + $isoDestinationFile
             Write-host -fore Yellow "isoDestinationFilePath " -NoNewline; Write-Host $isoDestinationFilePath
             $rCommand = "genisoimage -relaxed-filenames -J -R -o $isoDestinationFilePath -b ISOLINUX.BIN -c boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFIBOOT.IMG -no-emul-boot $isoSourceFiles"
